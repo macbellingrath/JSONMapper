@@ -78,7 +78,7 @@ class JSONTests: XCTestCase {
     }
     
     func testPerformance() {
-        self.measureBlock() {
+        self.measure() {
             _ = JSONAdapter<TestObject>.objectsFromJSONArray(self.testDictArray)
         }
     }
@@ -86,7 +86,7 @@ class JSONTests: XCTestCase {
     func testGetValuePerformance() {
         let mappers = testDictArray.map { return JSONMapper(dictionary: $0)}
         
-        self.measureBlock { () -> Void in
+        self.measure { () -> Void in
             for mapper in mappers {
                 mapper.flatMapArrayValueFor("enum", block: { (value) -> TestEnum? in
                     return TestEnum(rawValue: value)

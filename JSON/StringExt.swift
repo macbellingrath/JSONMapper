@@ -10,12 +10,12 @@ import Foundation
 
 extension String {
     
-    func substring(range: Range<Int>) -> String? {
-        if range.startIndex < 0 || range.endIndex > self.characters.count {
+    func substring(_ range: Range<Int>) -> String? {
+        if range.lowerBound < 0 || range.upperBound > self.characters.count {
             return nil
         }
         
-        let range = Range(start: startIndex.advancedBy(range.startIndex), end: startIndex.advancedBy(range.endIndex))
+        let range = (characters.index(startIndex, offsetBy: range.lowerBound) ..< characters.index(startIndex, offsetBy: range.upperBound))
         
         return self[range]
     }

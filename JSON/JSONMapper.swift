@@ -16,29 +16,29 @@ public protocol JSONMappable {
 }
 
 public struct JSONDateFormatter {
-    private static var formatters: [String: NSDateFormatter] = [:]
+    fileprivate static var formatters: [String: DateFormatter] = [:]
     
-    public static func registerDateFormatter(formatter: NSDateFormatter, withKey key: String) {
+    public static func registerDateFormatter(_ formatter: DateFormatter, withKey key: String) {
         formatters[key] = formatter
     }
     
-    public static func dateFormatterWith(key: String) -> NSDateFormatter? {
+    public static func dateFormatterWith(_ key: String) -> DateFormatter? {
         return formatters[key]
     }
 }
 
 public final class JSONAdapter <N: JSONMappable> {
     
-    private init() {}
+    fileprivate init() {}
     
-    public class func objectFromJSONDictionary(dict: JSONDict) -> N {
+    public class func objectFromJSONDictionary(_ dict: JSONDict) -> N {
         let mapper = JSONMapper(dictionary: dict)
         let object = N(mapper: mapper)
         
         return object
     }
     
-    public class func objectsFromJSONArray(array: JSONArray) -> [N] {
+    public class func objectsFromJSONArray(_ array: JSONArray) -> [N] {
         let results = array.map({ (json: JSONDict) -> N in
             return self.objectFromJSONDictionary(json)
         })
@@ -46,16 +46,16 @@ public final class JSONAdapter <N: JSONMappable> {
         return results
     }
     
-    public class func objectsFromJSONFile(url: NSURL) -> [N]? {
-        if let data = NSData(contentsOfURL: url) {
+    public class func objectsFromJSONFile(_ url: URL) -> [N]? {
+        if let data = try? Data(contentsOf: url) {
             return objectsFromJSONData(data)
         }
         
         return nil
     }
     
-    public class func objectsFromJSONData(data: NSData) -> [N]? {
-        if let json: AnyObject = try? NSJSONSerialization.JSONObjectWithData(data, options: []) {
+    public class func objectsFromJSONData(_ data: Data) -> [N]? {
+        if let json: AnyObject = try! JSONSerialization.jsonObject(with: data, options: []) as AnyObject? {
             if let dict = json as? JSONDict {
                 return [objectFromJSONDictionary(dict)]
             }
@@ -68,7 +68,7 @@ public final class JSONAdapter <N: JSONMappable> {
         return nil
     }
     
-    public class func objectsFrom(array: [AnyObject]) -> [N]? {
+    public class func objectsFrom(_ array: [AnyObject]) -> [N]? {
         if let array = array as? JSONArray {
             return objectsFromJSONArray(array)
         }
@@ -76,7 +76,7 @@ public final class JSONAdapter <N: JSONMappable> {
         return nil
     }
     
-    public class func objectsValueFrom(array: [AnyObject]) -> [N] {
+    public class func objectsValueFrom(_ array: [AnyObject]) -> [N] {
         if let array = objectsFrom(array) {
             return array
         }
@@ -84,7 +84,7 @@ public final class JSONAdapter <N: JSONMappable> {
         return []
     }
     
-    public class func objectFrom(object: AnyObject) -> N? {
+    public class func objectFrom(_ object: AnyObject) -> N? {
         if let dict = object as? JSONDict {
             return objectFromJSONDictionary(dict)
         }
@@ -102,11 +102,11 @@ public final class JSONMapper {
     }
     
     public subscript(keyPath: String) -> AnyObject? {
-        return rawJSONDictionary.valueForKeyPath(keyPath)
+        return rawJSONDictionary.value(forKeyPath: keyPath) as AnyObject?
     }
 }
 
-extension JSONMapper: DictionaryLiteralConvertible {
+extension JSONMapper: ExpressibleByDictionaryLiteral {
     public typealias Key = String
     public typealias Value = AnyObject
     
@@ -117,7 +117,7 @@ extension JSONMapper: DictionaryLiteralConvertible {
             dictionary[key_] = value
         }
         
-        self.init(dictionary: dictionary)
+        self.init(dictionary: dictionary as JSONDict)
     }
 }
 
@@ -125,15 +125,15 @@ extension JSONMapper: DictionaryLiteralConvertible {
 
 extension JSONMapper {
     
-    public func stringFor(keyPath: String) -> String? {
-        return rawJSONDictionary.valueForKeyPath(keyPath) as? String
+    public func stringFor(_ keyPath: String) -> String? {
+        return rawJSONDictionary.value(forKeyPath: keyPath) as? String
     }
     
-    public func stringValueFor(keyPath: String) -> String {
+    public func stringValueFor(_ keyPath: String) -> String {
         return stringFor(keyPath) ?? ""
     }
     
-    public func stringValueFor(keyPath: String, defaultValue: String) -> String {
+    public func stringValueFor(_ keyPath: String, defaultValue: String) -> String {
         return stringFor(keyPath) ?? defaultValue
     }
 }
@@ -142,15 +142,15 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func intFor(keyPath: String) -> Int? {
-        return rawJSONDictionary.valueForKeyPath(keyPath) as? Int
+    public func intFor(_ keyPath: String) -> Int? {
+        return rawJSONDictionary.value(forKeyPath: keyPath) as? Int
     }
     
-    public func intValueFor(keyPath: String) -> Int {
+    public func intValueFor(_ keyPath: String) -> Int {
         return intFor(keyPath) ?? 0
     }
     
-    public func intValueFor(keyPath: String, defaultValue: Int) -> Int {
+    public func intValueFor(_ keyPath: String, defaultValue: Int) -> Int {
         return intFor(keyPath) ?? defaultValue
     }
 }
@@ -159,13 +159,13 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func boolFor(keyPath: String) -> Bool? {
-        if let value = rawJSONDictionary.valueForKeyPath(keyPath) as? Bool {
+    public func boolFor(_ keyPath: String) -> Bool? {
+        if let value = rawJSONDictionary.value(forKeyPath: keyPath) as? Bool {
             return value
         }
         
-        if let value = rawJSONDictionary.valueForKeyPath(keyPath) as? String {
-            switch value.lowercaseString {
+        if let value = rawJSONDictionary.value(forKeyPath: keyPath) as? String {
+            switch value.lowercased() {
             case "true", "yes", "1":
                 return true
             case "false", "no", "0":
@@ -178,11 +178,11 @@ extension JSONMapper {
         return nil
     }
     
-    public func boolValueFor(keyPath: String) -> Bool {
+    public func boolValueFor(_ keyPath: String) -> Bool {
         return boolFor(keyPath) ?? false
     }
     
-    public func boolValueFor(keyPath: String, defaultValue: Bool) -> Bool {
+    public func boolValueFor(_ keyPath: String, defaultValue: Bool) -> Bool {
         return boolFor(keyPath) ?? defaultValue
     }
 }
@@ -191,15 +191,15 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func doubleFor(keyPath: String) -> Double? {
-        return rawJSONDictionary.valueForKeyPath(keyPath) as? Double
+    public func doubleFor(_ keyPath: String) -> Double? {
+        return rawJSONDictionary.value(forKeyPath: keyPath) as? Double
     }
     
-    public func doubleValueFor(keyPath: String) -> Double {
+    public func doubleValueFor(_ keyPath: String) -> Double {
         return doubleFor(keyPath) ?? 0.0
     }
     
-    public func doubleValueFor(keyPath: String, defaultValue: Double) -> Double {
+    public func doubleValueFor(_ keyPath: String, defaultValue: Double) -> Double {
         return doubleFor(keyPath) ?? defaultValue
     }
 }
@@ -208,15 +208,15 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func floatFor(keyPath: String) -> Float? {
-        return rawJSONDictionary.valueForKeyPath(keyPath) as? Float
+    public func floatFor(_ keyPath: String) -> Float? {
+        return rawJSONDictionary.value(forKeyPath: keyPath) as? Float
     }
     
-    public func floatValueFor(keyPath: String) -> Float {
+    public func floatValueFor(_ keyPath: String) -> Float {
         return floatFor(keyPath) ?? 0.0
     }
     
-    public func floatValueFor(keyPath: String, defaultValue: Float) -> Float {
+    public func floatValueFor(_ keyPath: String, defaultValue: Float) -> Float {
         return floatFor(keyPath) ?? defaultValue
     }
 }
@@ -225,15 +225,15 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func arrayFor<T>(keyPath: String) -> [T]? {
-        return rawJSONDictionary.valueForKeyPath(keyPath) as? [T]
+    public func arrayFor<T>(_ keyPath: String) -> [T]? {
+        return rawJSONDictionary.value(forKeyPath: keyPath) as? [T]
     }
     
-    public func arrayValueFor<T>(keyPath: String) -> [T] {
+    public func arrayValueFor<T>(_ keyPath: String) -> [T] {
         return arrayFor(keyPath) ?? [T]()
     }
     
-    public func arrayValueFor<T>(keyPath: String, defaultValue: [T]) -> [T] {
+    public func arrayValueFor<T>(_ keyPath: String, defaultValue: [T]) -> [T] {
         return arrayFor(keyPath) ?? defaultValue
     }
 }
@@ -242,19 +242,19 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func setFor<T>(keyPath: String) -> Set<T>? {
-        if let array = rawJSONDictionary.valueForKeyPath(keyPath) as? [T] {
+    public func setFor<T>(_ keyPath: String) -> Set<T>? {
+        if let array = rawJSONDictionary.value(forKeyPath: keyPath) as? [T] {
             return Set<T>(array)
         }
         
         return nil
     }
     
-    public func setValueFor<T>(keyPath: String) -> Set<T> {
+    public func setValueFor<T>(_ keyPath: String) -> Set<T> {
         return setFor(keyPath) ?? Set<T>()
     }
     
-    public func setValueFor<T>(keyPath: String, defaultValue: Set<T>) -> Set<T> {
+    public func setValueFor<T>(_ keyPath: String, defaultValue: Set<T>) -> Set<T> {
         return setFor(keyPath) ?? defaultValue
     }
 }
@@ -263,15 +263,15 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func dictionaryFor(keyPath: String) -> JSONDict? {
-        return rawJSONDictionary.valueForKeyPath(keyPath) as? JSONDict
+    public func dictionaryFor(_ keyPath: String) -> JSONDict? {
+        return rawJSONDictionary.value(forKeyPath: keyPath) as? JSONDict
     }
     
-    public func dictionaryValueFor(keyPath: String) -> JSONDict {
+    public func dictionaryValueFor(_ keyPath: String) -> JSONDict {
         return dictionaryFor(keyPath) ?? JSONDict()
     }
     
-    public func dictionaryValueFor(keyPath: String, defaultValue: JSONDict) -> JSONDict {
+    public func dictionaryValueFor(_ keyPath: String, defaultValue: JSONDict) -> JSONDict {
         return dictionaryFor(keyPath) ?? defaultValue
     }
 }
@@ -280,28 +280,28 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public typealias DateTransformerFromInt = (value: Int) -> NSDate?
-    public typealias DateTransformerFromString = (value: String) -> NSDate?
+    public typealias DateTransformerFromInt = (_ value: Int) -> Date?
+    public typealias DateTransformerFromString = (_ value: String) -> Date?
     
-    public func dateFromIntFor(keyPath: String, transform: DateTransformerFromInt) -> NSDate? {
+    public func dateFromIntFor(_ keyPath: String, transform: DateTransformerFromInt) -> Date? {
         if let value = intFor(keyPath) {
-            return transform(value: value)
+            return transform(value)
         }
         
         return nil
     }
     
-    public func dateFromStringFor(keyPath: String, transform: DateTransformerFromString) -> NSDate? {
+    public func dateFromStringFor(_ keyPath: String, transform: DateTransformerFromString) -> Date? {
         if let value = stringFor(keyPath) {
-            return transform(value: value)
+            return transform(value)
         }
         
         return nil
     }
     
-    public func dateFromStringFor(keyPath: String, withFormatterKey formatterKey: String) -> NSDate? {
+    public func dateFromStringFor(_ keyPath: String, withFormatterKey formatterKey: String) -> Date? {
         if let value = stringFor(keyPath), let formatter = JSONDateFormatter.dateFormatterWith(formatterKey) {
-            return formatter.dateFromString(value)
+            return formatter.date(from: value)
         }
         
         return nil
@@ -312,15 +312,15 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func urlFrom(keyPath: String) -> NSURL? {
-        if let value = stringFor(keyPath) where !value.isEmpty {
-            return NSURL(string: value)
+    public func urlFrom(_ keyPath: String) -> URL? {
+        if let value = stringFor(keyPath), !value.isEmpty {
+            return URL(string: value)
         }
         
         return nil
     }
     
-    public func urlValueFrom(keyPath: String, defaultValue: NSURL) -> NSURL {
+    public func urlValueFrom(_ keyPath: String, defaultValue: URL) -> URL {
         return urlFrom(keyPath) ?? defaultValue
     }
 }
@@ -329,7 +329,7 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func objectFor<T: JSONMappable>(keyPath: String) -> T? {
+    public func objectFor<T: JSONMappable>(_ keyPath: String) -> T? {
         if let dict = dictionaryFor(keyPath) {
             let mapper = JSONMapper(dictionary: dict)
             let object = T(mapper: mapper)
@@ -340,7 +340,7 @@ extension JSONMapper {
         return nil
     }
     
-    public func objectValueFor<T: JSONMappable>(keyPath: String) -> T {
+    public func objectValueFor<T: JSONMappable>(_ keyPath: String) -> T {
         let dict = dictionaryValueFor(keyPath)
         
         let mapper = JSONMapper(dictionary: dict)
@@ -354,7 +354,7 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    private func _objectsArrayFrom<T: JSONMappable>(array: JSONArray) -> [T] {
+    fileprivate func _objectsArrayFrom<T: JSONMappable>(_ array: JSONArray) -> [T] {
         let results = array.map { (dict: JSONDict) -> T in
             let mapper = JSONMapper(dictionary: dict)
             let object = T(mapper: mapper)
@@ -365,21 +365,21 @@ extension JSONMapper {
         return results
     }
     
-    public func objectArrayFor<T: JSONMappable>(keyPath: String) -> [T]? {
-        if let arrayValues = rawJSONDictionary.valueForKeyPath(keyPath) as? JSONArray {
+    public func objectArrayFor<T: JSONMappable>(_ keyPath: String) -> [T]? {
+        if let arrayValues = rawJSONDictionary.value(forKeyPath: keyPath) as? JSONArray {
             return _objectsArrayFrom(arrayValues)
         }
         
         return nil
     }
     
-    public func objectArrayValueFor<T: JSONMappable>(keyPath: String) -> [T] {
-        let arrayValues = rawJSONDictionary.valueForKeyPath(keyPath) as? JSONArray ?? JSONArray()
+    public func objectArrayValueFor<T: JSONMappable>(_ keyPath: String) -> [T] {
+        let arrayValues = rawJSONDictionary.value(forKeyPath: keyPath) as? JSONArray ?? JSONArray()
         
         return _objectsArrayFrom(arrayValues)
     }
     
-    public func objectArrayValueFor<T: JSONMappable>(keyPath: String, defaultValue: [T]) -> [T] {
+    public func objectArrayValueFor<T: JSONMappable>(_ keyPath: String, defaultValue: [T]) -> [T] {
         return objectArrayFor(keyPath) ?? defaultValue
     }
 }
@@ -388,7 +388,7 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func objectSetFor<T: JSONMappable>(keyPath: String) -> Set<T>? {
+    public func objectSetFor<T: JSONMappable>(_ keyPath: String) -> Set<T>? {
         if let values: [T] = objectArrayFor(keyPath) {
             return Set<T>(values)
         }
@@ -396,11 +396,11 @@ extension JSONMapper {
         return nil
     }
     
-    public func objectSetValueFor<T: JSONMappable>(keyPath: String) -> Set<T> {
+    public func objectSetValueFor<T: JSONMappable>(_ keyPath: String) -> Set<T> {
         return objectSetFor(keyPath) ?? Set<T>()
     }
     
-    public func objectSetValueFor<T: JSONMappable>(keyPath: String, defaultValue: Set<T>) -> Set<T> {
+    public func objectSetValueFor<T: JSONMappable>(_ keyPath: String, defaultValue: Set<T>) -> Set<T> {
         return objectSetFor(keyPath) ?? defaultValue
     }
 }
@@ -409,17 +409,17 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func transform<T, U>(keyPath: String, block: (value: T) -> U?) -> U? {
-        if let aValue = rawJSONDictionary.valueForKeyPath(keyPath) as? T {
-            return block(value: aValue)
+    public func transform<T, U>(_ keyPath: String, block: (_ value: T) -> U?) -> U? {
+        if let aValue = rawJSONDictionary.value(forKeyPath: keyPath) as? T {
+            return block(aValue)
         }
         
         return nil
     }
     
-    public func transformValue<T, U>(keyPath: String, defaultValue: U, block: (value: T) -> U) -> U {
-        if let aValue = rawJSONDictionary.valueForKeyPath(keyPath) as? T {
-            return block(value: aValue)
+    public func transformValue<T, U>(_ keyPath: String, defaultValue: U, block: (_ value: T) -> U) -> U {
+        if let aValue = rawJSONDictionary.value(forKeyPath: keyPath) as? T {
+            return block(aValue)
         }
         
         return defaultValue
@@ -430,8 +430,8 @@ extension JSONMapper {
 
 extension JSONMapper {
     
-    public func mapArrayFor<T, U>(keyPath: String, block: (value: T) -> U) -> [U]? {
-        if let array = rawJSONDictionary.valueForKeyPath(keyPath) as? [T] {
+    public func mapArrayFor<T, U>(_ keyPath: String, block: (_ value: T) -> U) -> [U]? {
+        if let array = rawJSONDictionary.value(forKeyPath: keyPath) as? [T] {
             let values = array.map(block)
             
             return values
@@ -440,16 +440,16 @@ extension JSONMapper {
         return nil
     }
     
-    public func mapArrayValueFor<T, U>(keyPath: String, block: (value: T) -> U) -> [U] {
+    public func mapArrayValueFor<T, U>(_ keyPath: String, block: (_ value: T) -> U) -> [U] {
         return mapArrayFor(keyPath, block: block) ?? [U]()
     }
     
-    public func flatMapArrayFor<T, U>(keyPath: String, block: (value: T) -> U?) -> [U]? {
-        if let array = rawJSONDictionary.valueForKeyPath(keyPath) as? [T] {
+    public func flatMapArrayFor<T, U>(_ keyPath: String, block: (_ value: T) -> U?) -> [U]? {
+        if let array = rawJSONDictionary.value(forKeyPath: keyPath) as? [T] {
             var newValues = [U]()
             
             for item in array {
-                if let value = block(value: item) {
+                if let value = block(item) {
                     newValues.append(value)
                 }
             }
@@ -460,7 +460,7 @@ extension JSONMapper {
         return nil
     }
     
-    public func flatMapArrayValueFor<T, U>(keyPath: String, block: (value: T) -> U?) -> [U] {
+    public func flatMapArrayValueFor<T, U>(_ keyPath: String, block: (_ value: T) -> U?) -> [U] {
         return flatMapArrayFor(keyPath, block: block) ?? [U]()
     }
 }
